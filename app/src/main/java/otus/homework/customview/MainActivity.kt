@@ -3,6 +3,7 @@ package otus.homework.customview
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.annotation.RawRes
+import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import otus.homework.data.Payment
@@ -14,6 +15,9 @@ class MainActivity : AppCompatActivity() {
         val data: List<Payment> = readRawJson(R.raw.payload)
         findViewById<PieView>(R.id.chart).apply {
             setValues(data)
+            callback = { category: Category ->
+                Snackbar.make(rootView, category.name, Snackbar.LENGTH_LONG).show()
+            }
         }
     }
 
