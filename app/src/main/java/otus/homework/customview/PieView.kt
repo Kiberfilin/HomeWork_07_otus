@@ -72,6 +72,7 @@ class PieView @JvmOverloads constructor(
             )
         }
         categories.sortBy { it.weight }
+        requestLayout()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -219,12 +220,25 @@ class PieView @JvmOverloads constructor(
 
         return true
     }
+
+    override fun onSaveInstanceState(): Parcelable? {
+        val parentState = super.onSaveInstanceState()
+        val savedState = SavedState(parentState)
+        savedState.categories = categories
+        return savedState
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        super.onRestoreInstanceState((state as SavedState).superState)
+        categories.apply {
+            clear()
+            addAll(state.categories)
+        }
+    }
 }
 
 @Parcelize
-class Category(
-    val weight: Float, val name: String, @ColorInt val color: Int
-): Parcelable
+class Category(val weight: Float, val name: String, @ColorInt val color: Int) : Parcelable
 
 private val Int.dp: Float
     get() = (this * Resources.getSystem().displayMetrics.density)
