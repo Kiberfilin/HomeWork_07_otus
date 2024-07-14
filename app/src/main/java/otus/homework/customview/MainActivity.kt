@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
                 false, null -> View.VISIBLE
             }
         }
-        findViewById<PieView>(R.id.chart).apply {
+        findViewById<PieView>(R.id.pie).apply {
             button.setOnClickListener {
                 setValues(data)
                 button.visibility = View.GONE
@@ -32,6 +32,9 @@ class MainActivity : AppCompatActivity() {
             }
             callback = { category: Category ->
                 Snackbar.make(rootView, category.name, Snackbar.LENGTH_LONG).show()
+                findViewById<ChartView>(R.id.chart).apply {
+                    setValues(data, category.name, category.color)
+                }
             }
         }
     }

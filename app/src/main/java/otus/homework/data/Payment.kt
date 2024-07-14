@@ -7,5 +7,5 @@ data class Payment(
     @SerializedName("name") var name: String,
     @SerializedName("amount") var amount: Int,
     @SerializedName("category") var category: String,
-    @SerializedName("time") var time: Int
+    @SerializedName("time") var time: Long
 )
