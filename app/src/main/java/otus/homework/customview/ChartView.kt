@@ -21,12 +21,6 @@ class ChartView @JvmOverloads constructor(
         private const val DAY_IN_MILLS: Int = 1000 * 60 * 60 * 24
         private const val OFFSET_START: Int = 20
         private const val OFFSET_TOP: Int = 20
-
-        @ColorInt
-        private fun generateColor(): Int {
-            val rnd = Random()
-            return Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256))
-        }
     }
 
     private val typedArray = context.obtainStyledAttributes(attrs, R.styleable.ChartView)
@@ -44,41 +38,40 @@ class ChartView @JvmOverloads constructor(
     @ColorInt
     private var categoryColor: Int = 0
 
-    fun setValues(data: List<Payment>, categoryName: String, @ColorInt color: Int) {
-        categoryColor = color
-        val categoryPayments = data.filter { it.category == categoryName }
+    fun setValues(data: List<Payment>, category: Category) {
+        categoryColor = category.color
+        val categoryPayments = data.filter { it.category == category.name }
         days = daysTotal(categoryPayments)
         paymentList.apply {
             clear()
-            addAll(calculatePaymentData(data))
+            addAll(calculatePaymentData(categoryPayments))
         }
         requestLayout()
     }
 
     private fun calculatePaymentData(data: List<Payment>): List<PayDay> {
         val tmpPaymentList: ArrayList<PayDay> = ArrayList()
-        val firstDate = Calendar.getInstance().apply {
+        val currentDate = Calendar.getInstance().apply {
             time = Date(data.minBy { it.time }.time)
         }
-        val currentDate = firstDate
         for (day in 1..days) {
-            val tmpAmount: BigDecimal = BigDecimal.ZERO
+            var tmpAmount: BigDecimal = BigDecimal.ZERO
             data.forEach { payment: Payment ->
                 val paymentDate = Calendar.getInstance().apply {
-                    time = Date(data.minBy { payment.time }.time)
+                    time = Date(payment.time)
                 }
                 if ((currentDate.get(Calendar.YEAR) == paymentDate.get(Calendar.YEAR)) &&
                     (currentDate.get(Calendar.DAY_OF_YEAR) == paymentDate.get(Calendar.DAY_OF_YEAR))
                 ) {
-                    tmpAmount.add(BigDecimal.valueOf(payment.amount.toLong()))
+                    tmpAmount += payment.amount.toBigDecimal()
                 }
             }
             val tmpDate = Calendar.getInstance().apply {
-                set(Calendar.YEAR, currentDate.get(Calendar.YEAR))
-                set(Calendar.DAY_OF_YEAR, currentDate.get(Calendar.DAY_OF_YEAR))
+                time = currentDate.time
             }
             val tmpPayDay: PayDay = PayDay(date = tmpDate, amount = tmpAmount)
             tmpPaymentList.add(tmpPayDay)
+            currentDate.add(Calendar.DATE, 1)
         }
         return tmpPaymentList
     }
@@ -88,7 +81,6 @@ class ChartView @JvmOverloads constructor(
         val maxTime = data.maxBy { it.time }.time
         return ((maxTime - minTime) / DAY_IN_MILLS).toInt() + 1
     }
-
 }
 
 private val Int.dp: Float

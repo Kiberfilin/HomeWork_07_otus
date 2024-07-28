@@ -13,11 +13,14 @@ import otus.homework.data.Payment
 class MainActivity : AppCompatActivity() {
     private var isCategoriesWasSet: Boolean = false
     private val keyForBundle: String = "isCategoriesWasSet"
+    private var chart: ChartView? = null
+    private var button: Button? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        chart = findViewById(R.id.chart)
         val data: List<Payment> = readRawJson(R.raw.payload)
-        val button = findViewById<Button>(R.id.button).apply {
+        button = findViewById<Button>(R.id.button).apply {
             text = "Установить значения"
             visibility = when (savedInstanceState?.getBoolean(keyForBundle)) {
                 true -> View.GONE
@@ -25,16 +28,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
         findViewById<PieView>(R.id.pie).apply {
-            button.setOnClickListener {
+            button?.setOnClickListener {
                 setValues(data)
-                button.visibility = View.GONE
+                button?.visibility = View.GONE
                 isCategoriesWasSet = true
             }
             callback = { category: Category ->
                 Snackbar.make(rootView, category.name, Snackbar.LENGTH_LONG).show()
-                findViewById<ChartView>(R.id.chart).apply {
-                    setValues(data, category.name, category.color)
-                }
+                chart?.setValues(data, category)
             }
         }
     }
