@@ -83,15 +83,17 @@ class PieView @JvmOverloads constructor(
 
         val newW = min((2 * pieRadius).toInt(), wSize)
         val newH = min((2 * pieRadius).toInt(), hSize)
-
+        println(
+            "$TAG (2 * pieRadius).toInt() = ${(2 * pieRadius).toInt()}; wSize = $wSize; hSize = $hSize"
+        )
         when (wMode) {
-            MeasureSpec.EXACTLY -> when (hMode) {
-                MeasureSpec.EXACTLY -> {
+            MeasureSpec.EXACTLY     -> when (hMode) {
+                MeasureSpec.EXACTLY     -> {
                     println("$TAG W_EXACTLY H_EXACTLY $wSize $hSize")
                     setMeasuredDimension(wSize, hSize)
                 }
 
-                MeasureSpec.AT_MOST -> {
+                MeasureSpec.AT_MOST     -> {
                     println("$TAG W_EXACTLY H_AT_MOST $wSize $hSize")
                     setMeasuredDimension(wSize, newH)
                 }
@@ -102,13 +104,13 @@ class PieView @JvmOverloads constructor(
                 }
             }
 
-            MeasureSpec.AT_MOST -> when (hMode) {
-                MeasureSpec.EXACTLY -> {
+            MeasureSpec.AT_MOST     -> when (hMode) {
+                MeasureSpec.EXACTLY     -> {
                     println("$TAG W_AT_MOST H_EXACTLY $wSize $hSize")
                     setMeasuredDimension(newW, hSize)
                 }
 
-                MeasureSpec.AT_MOST -> {
+                MeasureSpec.AT_MOST     -> {
                     println("$TAG W_AT_MOST H_AT_MOST $wSize $hSize")
                     setMeasuredDimension(newW, newH)
                 }
@@ -120,12 +122,12 @@ class PieView @JvmOverloads constructor(
             }
 
             MeasureSpec.UNSPECIFIED -> when (hMode) {
-                MeasureSpec.EXACTLY -> {
+                MeasureSpec.EXACTLY     -> {
                     println("$TAG W_UNSPECIFIED H_EXACTLY $wSize $hSize")
                     setMeasuredDimension(2 * pieRadius.toInt(), hSize)
                 }
 
-                MeasureSpec.AT_MOST -> {
+                MeasureSpec.AT_MOST     -> {
                     println("$TAG W_UNSPECIFIED H_AT_MOST $wSize $hSize")
                     setMeasuredDimension(2 * pieRadius.toInt(), newH)
                 }
@@ -173,22 +175,22 @@ class PieView @JvmOverloads constructor(
 
     private fun topOvalRect(width: Float, height: Float): Float = when {
         width < height -> (height - width) / 2
-        else -> 0f
+        else           -> 0f
     }
 
     private fun leftOvalRect(width: Float, height: Float): Float = when {
         width > height -> (width - height) / 2
-        else -> 0f
+        else           -> 0f
     }
 
     private fun rightOvalRect(width: Float, height: Float): Float = when {
         width > height -> height + (width - height) / 2
-        else -> width
+        else           -> width
     }
 
     private fun bottomOvalRect(width: Float, height: Float): Float = when {
         width < height -> width + (height - width) / 2
-        else -> height
+        else           -> height
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -205,7 +207,7 @@ class PieView @JvmOverloads constructor(
                 val atan: Float = Math.toDegrees(atan2(katetY, katetX).toDouble()).toFloat()
                 val ugol = when {
                     atan < 0 -> atan + DEGREE_TOTAL
-                    else -> atan
+                    else     -> atan
                 }
                 var tmpWeight: Float = 0f
                 for (category in categories) {
