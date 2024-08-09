@@ -13,7 +13,6 @@ import androidx.annotation.ColorInt
 import otus.homework.data.Payment
 import java.math.BigDecimal
 import java.util.Calendar
-import java.util.Date
 import kotlin.math.pow
 
 class ChartView @JvmOverloads constructor(
@@ -22,6 +21,7 @@ class ChartView @JvmOverloads constructor(
     companion object {
         private const val DEFAULT_STEP: Int = 50
         private const val DAY_IN_MILLS: Int = 1000 * 60 * 60 * 24
+        private const val MILLS_IN_ONE_SEC: Int = 1000
         private const val OFFSET_START: Int = 50
         private const val OFFSET_TOP: Int = 50
         private const val OFFSET_BOTTOM: Int = 50
@@ -86,13 +86,14 @@ class ChartView @JvmOverloads constructor(
     private fun calculatePaymentData(data: List<Payment>): List<PayDay> {
         val tmpPaymentList: ArrayList<PayDay> = ArrayList()
         val currentDate = Calendar.getInstance().apply {
-            time = Date(data.minBy { it.time }.time)
+            timeInMillis = data.minBy { it.time }.time * MILLS_IN_ONE_SEC
         }
+
         for (day in 1..days) {
             var tmpAmount: BigDecimal = BigDecimal.ZERO
             data.forEach { payment: Payment ->
                 val paymentDate = Calendar.getInstance().apply {
-                    time = Date(payment.time)
+                    timeInMillis = payment.time * MILLS_IN_ONE_SEC
                 }
                 if ((currentDate.get(Calendar.YEAR) == paymentDate.get(Calendar.YEAR)) &&
                     (currentDate.get(Calendar.DAY_OF_YEAR) == paymentDate.get(Calendar.DAY_OF_YEAR))
@@ -101,9 +102,9 @@ class ChartView @JvmOverloads constructor(
                 }
             }
             val tmpDate = Calendar.getInstance().apply {
-                time = currentDate.time
+                timeInMillis = currentDate.timeInMillis
             }
-            val tmpPayDay: PayDay = PayDay(date = tmpDate, amount = tmpAmount)
+            val tmpPayDay = PayDay(date = tmpDate, amount = tmpAmount)
             tmpPaymentList.add(tmpPayDay)
             currentDate.add(Calendar.DATE, 1)
         }
@@ -113,7 +114,7 @@ class ChartView @JvmOverloads constructor(
     private fun daysTotal(data: List<Payment>): Int {
         val minTime = data.minBy { it.time }.time
         val maxTime = data.maxBy { it.time }.time
-        return ((maxTime - minTime) / DAY_IN_MILLS).toInt() + 1
+        return ((maxTime - minTime) * 1000L / DAY_IN_MILLS).toInt() + 1
     }
 
     override fun onDraw(canvas: Canvas) {
