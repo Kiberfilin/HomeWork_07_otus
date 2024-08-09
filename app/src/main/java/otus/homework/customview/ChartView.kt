@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
@@ -13,6 +14,7 @@ import otus.homework.data.Payment
 import java.math.BigDecimal
 import java.util.Calendar
 import java.util.Date
+import kotlin.math.pow
 
 class ChartView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
@@ -24,7 +26,7 @@ class ChartView @JvmOverloads constructor(
         private const val OFFSET_TOP: Int = 50
         private const val OFFSET_BOTTOM: Int = 50
         private const val X_TAIL: Int = 50
-        private const val MAX_SPENT_AMOUNT_IN_DAY_Y_PERSENTAGE: Float = 0.9F
+        private const val TAG: String = "ChartView"
     }
 
     private val typedArray = context.obtainStyledAttributes(attrs, R.styleable.ChartView)
@@ -39,6 +41,7 @@ class ChartView @JvmOverloads constructor(
 
     private val greedPaint = Paint().apply {
         style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(10f, 20f), 0f)
         isAntiAlias = true
         color = Color.DKGRAY
         alpha = 200
@@ -49,20 +52,35 @@ class ChartView @JvmOverloads constructor(
     private val axisPath = Path()
     private val greedPath = Path()
     private var maxSpentInOneDay: Float = 0F
+    private var divisionCostY: Float = 1F
 
     @ColorInt
     private var categoryColor: Int = 0
 
     fun setValues(data: List<Payment>, category: Category) {
         categoryColor = category.color
+        println("$TAG categoryColor $categoryColor")
         val categoryPayments = data.filter { it.category == category.name }
+        println("$TAG categoryPayments $categoryPayments")
         days = daysTotal(categoryPayments)
+        println("$TAG daysTotal $days")
         paymentList.apply {
             clear()
             addAll(calculatePaymentData(categoryPayments))
         }
+        println("$TAG paymentList $paymentList")
         maxSpentInOneDay = paymentList.maxBy { it.amount }.amount.toFloat()
+        println("$TAG maxSpentInOneDay $maxSpentInOneDay")
+        divisionCostY = calculateDivisionCostY(maxSpentInOneDay)
+        println("$TAG divisionCostY $divisionCostY")
         requestLayout()
+    }
+
+    private fun calculateDivisionCostY(maxSpentInOneDay: Float): Float {
+        val maxSpentInOneDayString = maxSpentInOneDay.toString()
+        val number = maxSpentInOneDayString.split(',', '.').first()
+        val lengthOfNumber = number.length
+        return 10f.pow(lengthOfNumber - 1)
     }
 
     private fun calculatePaymentData(data: List<Payment>): List<PayDay> {
@@ -100,10 +118,11 @@ class ChartView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        println("$TAG ---------------------------")
         val xStart: Float = OFFSET_START.toFloat()
         val yStart: Float = OFFSET_TOP.toFloat()
         val xFinish: Float = OFFSET_START.toFloat() + step * days + X_TAIL
-        val yFinish: Float = height - OFFSET_TOP.toFloat() - OFFSET_BOTTOM.toFloat()
+        val yFinish: Float = (height - OFFSET_TOP - OFFSET_BOTTOM).toFloat()
         greedPath.apply {
             reset()
             for (day in 1..days) {
@@ -111,6 +130,16 @@ class ChartView @JvmOverloads constructor(
                 val xDay: Float = xStart + day * step
                 moveTo(xDay, yStart)
                 lineTo(xDay, yFinish)
+            }
+            // рисуем горизонтальные линии сетки
+            val totalHorisontalLines = (maxSpentInOneDay / divisionCostY).toInt() + 1
+            println("$TAG totalHorisontalLines $totalHorisontalLines")
+            val density = (yFinish - OFFSET_TOP) / (totalHorisontalLines * divisionCostY)
+            println("$TAG density $density")
+            for (division in 1..totalHorisontalLines) {
+                val tmpY = yFinish - (division * density * divisionCostY)
+                moveTo(xStart, tmpY)
+                lineTo(xFinish, tmpY)
             }
         }
         axisPath.apply {
