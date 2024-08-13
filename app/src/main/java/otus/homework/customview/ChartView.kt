@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.CornerPathEffect
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
@@ -12,6 +11,7 @@ import android.util.AttributeSet
 import android.view.View
 import otus.homework.data.Payment
 import java.math.BigDecimal
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import kotlin.math.pow
 
@@ -25,6 +25,8 @@ class ChartView @JvmOverloads constructor(
         private const val OFFSET_START: Int = 50
         private const val OFFSET_TOP: Int = 50
         private const val OFFSET_BOTTOM: Int = 50
+
+        //private const val GREED_TEXT_SIZE = OFFSET_BOTTOM * 0.7f
         private const val X_TAIL: Int = 50
         private const val TAG: String = "ChartView"
     }
@@ -50,8 +52,16 @@ class ChartView @JvmOverloads constructor(
     private val graphPaint = Paint().apply {
         style = Paint.Style.STROKE
         isAntiAlias = true
-        pathEffect = CornerPathEffect(160f)
         strokeWidth = 5f
+    }
+
+    private val textPaint = Paint().apply {
+        style = Paint.Style.FILL
+        textAlign = Paint.Align.LEFT
+        isAntiAlias = true
+        color = Color.DKGRAY
+        alpha = 200
+        strokeWidth = 2f
     }
 
     private val paymentList: ArrayList<PayDay> = ArrayList()
@@ -61,6 +71,9 @@ class ChartView @JvmOverloads constructor(
     private val graphPath = Path()
     private var maxSpentInOneDay: Float = 0F
     private var divisionCostY: Float = 1F
+    private var useShortDateFormat: Boolean = false
+    private var dateFormat: SimpleDateFormat = SimpleDateFormat("dd.MM.yyyy")
+    private var shortDateFormat: SimpleDateFormat = SimpleDateFormat("dd")
 
     fun setValues(data: List<Payment>, category: Category) {
         graphPaint.color = category.color
@@ -123,42 +136,68 @@ class ChartView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        println("$TAG ---------------------------")
-        val xStart: Float = OFFSET_START.toFloat()
-        val yStart: Float = OFFSET_TOP.toFloat()
-        val xFinish: Float = OFFSET_START.toFloat() + step * days + X_TAIL
-        val yFinish: Float = (height - OFFSET_TOP - OFFSET_BOTTOM).toFloat()
-        val totalHorisontalLines = (maxSpentInOneDay / divisionCostY).toInt() + 1
-        println("$TAG totalHorisontalLines $totalHorisontalLines")
-        val density = (yFinish - OFFSET_TOP) / (totalHorisontalLines * divisionCostY)
-        println("$TAG density $density")
-        greedPath.apply {
-            reset()
-            for (day in 1..days) {
-                // рисуем вертикальные линии сетки
-                val xDay: Float = xStart + day * step
-                moveTo(xDay, yStart)
-                lineTo(xDay, yFinish)
+        if (days != 0) {
+            println("$TAG ---------------------------")
+            val xStart: Float = OFFSET_START.toFloat()
+            val yStart: Float = OFFSET_TOP.toFloat()
+            val xFinish: Float = OFFSET_START.toFloat() + step * days + X_TAIL
+            val yFinish: Float = (height - OFFSET_TOP - OFFSET_BOTTOM).toFloat()
+            val totalHorisontalLines = (maxSpentInOneDay / divisionCostY).toInt() + 1
+            println("$TAG totalHorisontalLines $totalHorisontalLines")
+            val density = (yFinish - OFFSET_TOP) / (totalHorisontalLines * divisionCostY)
+            println("$TAG density $density")
+            val tmpTextSize = yFinish / 10f / 3f
+            textPaint.textSize = tmpTextSize
+            paymentList.forEach { day: PayDay ->
+                val tmpText = dateFormat.format(day.date.time)
+                val fittedCharsNumber = textPaint.breakText(tmpText, false, step, null)
+                useShortDateFormat = fittedCharsNumber < tmpText.length
             }
-            // рисуем горизонтальные линии сетки
-            for (division in 1..totalHorisontalLines) {
-                val tmpY = yFinish - (division * density * divisionCostY)
-                moveTo(xStart, tmpY)
-                lineTo(xFinish, tmpY)
+            greedPath.apply {
+                reset()
+                for (day in 1..days) {
+                    // рисуем вертикальные линии сетки и подписи к ним
+                    val xDay: Float = xStart + day * step
+                    moveTo(xDay, yStart)
+                    lineTo(xDay, yFinish)
+                    val verticalGreedLineText = if (useShortDateFormat) {
+                        shortDateFormat.format(paymentList[day - 1].date.time)
+                    } else {
+                        dateFormat.format(paymentList[day - 1].date.time)
+                    }
+                    canvas.drawText(
+                        verticalGreedLineText,
+                        xDay - step + OFFSET_START * 0.2f,
+                        yFinish - textPaint.textSize * 0.2f,
+                        textPaint
+                    )
+                }
+                // рисуем горизонтальные линии сетки и подписи к ним
+                textPaint.textSize = tmpTextSize
+                for (division in 1..totalHorisontalLines) {
+                    val tmpY = yFinish - (division * density * divisionCostY)
+                    moveTo(xStart, tmpY)
+                    lineTo(xFinish, tmpY)
+                    val horizontalGreedLineText = (divisionCostY * division).toInt().toString()
+                    canvas.drawText(
+                        horizontalGreedLineText,
+                        xStart + OFFSET_START * 0.2f,
+                        tmpY + textPaint.textSize,
+                        textPaint
+                    )
+                }
             }
-        }
-        axisPath.apply {
-            reset()
-            // ось y: деньги
-            moveTo(xStart, yStart)
-            lineTo(xStart, yFinish)
-            // ось x: дни
-            moveTo(xStart, yFinish)
-            lineTo(xFinish, yFinish)
-        }
+            axisPath.apply {
+                reset()
+                // ось y: деньги
+                moveTo(xStart, yStart)
+                lineTo(xStart, yFinish)
+                // ось x: дни
+                moveTo(xStart, yFinish)
+                lineTo(xFinish, yFinish)
+            }
 
-        canvas.apply {
-            if (days != 0) {
+            canvas.apply {
                 drawPath(axisPath, axisPaint)
                 drawPath(greedPath, greedPaint)
                 graphPath.apply {
@@ -171,7 +210,7 @@ class ChartView @JvmOverloads constructor(
                         lineTo(tmpX, tmpY)
                     }
                     lineTo(
-                        xStart + step * days,
+                        xStart + step * days - X_TAIL,
                         yFinish - density * paymentList.last().amount.toFloat()
                     )
                 }
