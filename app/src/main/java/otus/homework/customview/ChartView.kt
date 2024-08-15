@@ -8,8 +8,14 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.os.Build
+import android.os.Parcel
+import android.os.Parcelable
 import android.util.AttributeSet
 import android.view.View
+import android.view.View.BaseSavedState
+import androidx.annotation.ColorInt
+import kotlinx.parcelize.Parcelize
 import otus.homework.data.Payment
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
@@ -27,8 +33,6 @@ class ChartView @JvmOverloads constructor(
         private const val OFFSET_START: Int = 50
         private const val OFFSET_TOP: Int = 50
         private const val OFFSET_BOTTOM: Int = 50
-
-        //private const val GREED_TEXT_SIZE = OFFSET_BOTTOM * 0.7f
         private const val X_TAIL: Int = 50
         private const val TAG: String = "ChartView"
     }
@@ -74,13 +78,18 @@ class ChartView @JvmOverloads constructor(
     private var maxSpentInOneDay: Float = 0F
     private var divisionCostY: Float = 1F
     private var useShortDateFormat: Boolean = false
+
+    @ColorInt
+    private var categoryColor: Int = 0
+
     @SuppressLint("SimpleDateFormat")
     private var dateFormat: SimpleDateFormat = SimpleDateFormat("dd.MM.yyyy")
+
     @SuppressLint("SimpleDateFormat")
     private var shortDateFormat: SimpleDateFormat = SimpleDateFormat("dd")
 
     fun setValues(data: List<Payment>, category: Category) {
-        graphPaint.color = category.color
+        categoryColor = category.color
         val categoryPayments = data.filter { it.category == category.name }
         println("$TAG categoryPayments $categoryPayments")
         days = daysTotal(categoryPayments)
@@ -147,13 +156,13 @@ class ChartView @JvmOverloads constructor(
         val newW = min((step * days + OFFSET_START + X_TAIL).toInt(), wSize)
         val newH = min((5 * step + OFFSET_TOP + OFFSET_BOTTOM).toInt(), hSize)
         when (wMode) {
-            MeasureSpec.EXACTLY -> when (hMode) {
-                MeasureSpec.EXACTLY -> {
+            MeasureSpec.EXACTLY     -> when (hMode) {
+                MeasureSpec.EXACTLY     -> {
                     println("$TAG W_EXACTLY H_EXACTLY $wSize $hSize")
                     setMeasuredDimension(wSize, hSize)
                 }
 
-                MeasureSpec.AT_MOST -> {
+                MeasureSpec.AT_MOST     -> {
                     println("$TAG W_EXACTLY H_AT_MOST $wSize $hSize")
                     setMeasuredDimension(wSize, newH)
                 }
@@ -164,13 +173,13 @@ class ChartView @JvmOverloads constructor(
                 }
             }
 
-            MeasureSpec.AT_MOST -> when (hMode) {
-                MeasureSpec.EXACTLY -> {
+            MeasureSpec.AT_MOST     -> when (hMode) {
+                MeasureSpec.EXACTLY     -> {
                     println("$TAG W_AT_MOST H_EXACTLY $wSize $hSize")
                     setMeasuredDimension(newW, hSize)
                 }
 
-                MeasureSpec.AT_MOST -> {
+                MeasureSpec.AT_MOST     -> {
                     println("$TAG W_AT_MOST H_AT_MOST $wSize $hSize")
                     setMeasuredDimension(newW, newH)
                 }
@@ -182,7 +191,7 @@ class ChartView @JvmOverloads constructor(
             }
 
             MeasureSpec.UNSPECIFIED -> when (hMode) {
-                MeasureSpec.EXACTLY -> {
+                MeasureSpec.EXACTLY     -> {
                     println("$TAG W_UNSPECIFIED H_EXACTLY $wSize $hSize")
                     setMeasuredDimension(
                         (step * days + OFFSET_START + X_TAIL).toInt(),
@@ -190,7 +199,7 @@ class ChartView @JvmOverloads constructor(
                     )
                 }
 
-                MeasureSpec.AT_MOST -> {
+                MeasureSpec.AT_MOST     -> {
                     println("$TAG W_UNSPECIFIED H_AT_MOST $wSize $hSize")
                     setMeasuredDimension(
                         (step * days + OFFSET_START + X_TAIL).toInt(),
@@ -289,13 +298,84 @@ class ChartView @JvmOverloads constructor(
                         yFinish - density * paymentList.last().amount.toFloat()
                     )
                 }
+                graphPaint.color = categoryColor
                 drawPath(graphPath, graphPaint)
             }
         }
+    }
+
+    override fun onSaveInstanceState(): Parcelable? {
+        val parentState = super.onSaveInstanceState()
+        val savedState = ChartViewSavedState(parentState)
+        savedState.paymentList = paymentList
+        savedState.days = days
+        savedState.maxSpentInOneDay = maxSpentInOneDay
+        savedState.divisionCostY = divisionCostY
+        savedState.categoryColor = categoryColor
+        return savedState
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        super.onRestoreInstanceState((state as ChartViewSavedState).superState)
+        paymentList.apply {
+            clear()
+            addAll(state.paymentList)
+        }
+        days = state.days
+        maxSpentInOneDay = state.maxSpentInOneDay
+        divisionCostY = state.divisionCostY
+        categoryColor = state.categoryColor
     }
 }
 
 private val Int.dp: Float
     get() = (this * Resources.getSystem().displayMetrics.density)
 
-private data class PayDay(val date: Calendar, val amount: BigDecimal)
+@Parcelize
+private data class PayDay(val date: Calendar, val amount: BigDecimal) : Parcelable
+
+private class ChartViewSavedState : BaseSavedState {
+    var paymentList: ArrayList<PayDay> = ArrayList()
+    var days: Int = 0
+    var maxSpentInOneDay: Float = 0F
+    var divisionCostY: Float = 1F
+
+    @ColorInt
+    var categoryColor: Int = 0
+
+    //Конструктор для сохранения состояния
+    constructor(superState: Parcelable?) : super(superState)
+
+    //Конструктор для восстановления состояния
+    constructor(source: Parcel?) : super(source) {
+        val tmpList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) ({
+            source?.readArrayList(PayDay::class.java.classLoader, PayDay::class.java)
+        }) else ({
+            source?.readArrayList(PayDay::class.java.classLoader)
+        })
+        paymentList = tmpList as ArrayList<PayDay>
+        days = source?.readInt()!!
+        maxSpentInOneDay = source.readFloat()
+        divisionCostY = source.readFloat()
+        categoryColor = source.readInt()
+    }
+
+    override fun writeToParcel(out: Parcel, flags: Int) {
+        super.writeToParcel(out, flags)
+        out.apply {
+            writeTypedList(paymentList)
+            writeInt(days)
+            writeFloat(maxSpentInOneDay)
+            writeFloat(divisionCostY)
+            writeInt(categoryColor)
+        }
+
+    }
+
+    companion object CREATOR : Parcelable.Creator<ChartViewSavedState> {
+        override fun createFromParcel(source: Parcel): ChartViewSavedState =
+            ChartViewSavedState(source)
+
+        override fun newArray(size: Int): Array<ChartViewSavedState?> = arrayOfNulls(size)
+    }
+}
