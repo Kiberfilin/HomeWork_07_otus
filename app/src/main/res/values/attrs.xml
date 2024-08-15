@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="PieView">
+        <attr name="pieRadius" format="dimension" />
+    </declare-styleable>
+    <declare-styleable name="ChartView">
+        <attr name="stepInDp" format="dimension" />
+    </declare-styleable>
+</resources>
