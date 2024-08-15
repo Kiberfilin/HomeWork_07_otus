@@ -1,5 +1,6 @@
 package otus.homework.customview
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.Canvas
@@ -13,6 +14,7 @@ import otus.homework.data.Payment
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import kotlin.math.min
 import kotlin.math.pow
 
 class ChartView @JvmOverloads constructor(
@@ -72,7 +74,9 @@ class ChartView @JvmOverloads constructor(
     private var maxSpentInOneDay: Float = 0F
     private var divisionCostY: Float = 1F
     private var useShortDateFormat: Boolean = false
+    @SuppressLint("SimpleDateFormat")
     private var dateFormat: SimpleDateFormat = SimpleDateFormat("dd.MM.yyyy")
+    @SuppressLint("SimpleDateFormat")
     private var shortDateFormat: SimpleDateFormat = SimpleDateFormat("dd")
 
     fun setValues(data: List<Payment>, category: Category) {
@@ -132,6 +136,77 @@ class ChartView @JvmOverloads constructor(
         val minTime = data.minBy { it.time }.time
         val maxTime = data.maxBy { it.time }.time
         return ((maxTime - minTime) * 1000L / DAY_IN_MILLS).toInt() + 1
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val wMode = MeasureSpec.getMode(widthMeasureSpec)
+        val hMode = MeasureSpec.getMode(heightMeasureSpec)
+        val wSize = MeasureSpec.getSize(widthMeasureSpec)
+        val hSize = MeasureSpec.getSize(heightMeasureSpec)
+
+        val newW = min((step * days + OFFSET_START + X_TAIL).toInt(), wSize)
+        val newH = min((5 * step + OFFSET_TOP + OFFSET_BOTTOM).toInt(), hSize)
+        when (wMode) {
+            MeasureSpec.EXACTLY -> when (hMode) {
+                MeasureSpec.EXACTLY -> {
+                    println("$TAG W_EXACTLY H_EXACTLY $wSize $hSize")
+                    setMeasuredDimension(wSize, hSize)
+                }
+
+                MeasureSpec.AT_MOST -> {
+                    println("$TAG W_EXACTLY H_AT_MOST $wSize $hSize")
+                    setMeasuredDimension(wSize, newH)
+                }
+
+                MeasureSpec.UNSPECIFIED -> {
+                    println("$TAG W_EXACTLY H_UNSPECIFIED $wSize $hSize")
+                    setMeasuredDimension(wSize, (5 * step).toInt())
+                }
+            }
+
+            MeasureSpec.AT_MOST -> when (hMode) {
+                MeasureSpec.EXACTLY -> {
+                    println("$TAG W_AT_MOST H_EXACTLY $wSize $hSize")
+                    setMeasuredDimension(newW, hSize)
+                }
+
+                MeasureSpec.AT_MOST -> {
+                    println("$TAG W_AT_MOST H_AT_MOST $wSize $hSize")
+                    setMeasuredDimension(newW, newH)
+                }
+
+                MeasureSpec.UNSPECIFIED -> {
+                    println("$TAG W_AT_MOST H_UNSPECIFIED $wSize $hSize")
+                    setMeasuredDimension(newW, (5 * step).toInt())
+                }
+            }
+
+            MeasureSpec.UNSPECIFIED -> when (hMode) {
+                MeasureSpec.EXACTLY -> {
+                    println("$TAG W_UNSPECIFIED H_EXACTLY $wSize $hSize")
+                    setMeasuredDimension(
+                        (step * days + OFFSET_START + X_TAIL).toInt(),
+                        hSize
+                    )
+                }
+
+                MeasureSpec.AT_MOST -> {
+                    println("$TAG W_UNSPECIFIED H_AT_MOST $wSize $hSize")
+                    setMeasuredDimension(
+                        (step * days + OFFSET_START + X_TAIL).toInt(),
+                        newH
+                    )
+                }
+
+                MeasureSpec.UNSPECIFIED -> {
+                    println("$TAG W_UNSPECIFIED H_UNSPECIFIED $wSize $hSize")
+                    setMeasuredDimension(
+                        (step * days + OFFSET_START + X_TAIL).toInt(),
+                        (5 * step).toInt()
+                    )
+                }
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
